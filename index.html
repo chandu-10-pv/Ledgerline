@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ledgerline – Job Application Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#f3f5f2;--sf:#fff;--tx:#18211d;--mu:#65726b;--ln:#d9dfda;--ac:#1f5c4a;--ac2:#e9f1ed;--wa:#b4531f;--wl:#7a8a83;--ap:#2f5f9e;--iv:#8a5a12;--of:#1f6b3a;--rj:#9a3b3b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#121816;--sf:#1a2220;--tx:#e8eeea;--mu:#93a39b;--ln:#2d3935;--ac:#6fc3a5;--ac2:#1f2d28;--wa:#f08f58;--wl:#9db0a8;--ap:#7fb0ee;--iv:#e0b25c;--of:#6fd18f;--rj:#e48a8a}}
+:root[data-theme=dark]{--bg:#121816;--sf:#1a2220;--tx:#e8eeea;--mu:#93a39b;--ln:#2d3935;--ac:#6fc3a5;--ac2:#1f2d28;--wa:#f08f58;--wl:#9db0a8;--ap:#7fb0ee;--iv:#e0b25c;--of:#6fd18f;--rj:#e48a8a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 "Iowan Old Style","Charter",Georgia,serif}
+h1,h2,h3,button,input,select,textarea,label,.ui{font-family:"Avenir Next","Segoe UI",system-ui,sans-serif}
+h1{font-size:28px;margin:0;letter-spacing:-.02em}h2{font-size:15px;margin:0 0 10px}
+button{cursor:pointer;border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:6px;padding:7px 12px;font-size:14px}
+button.p{background:var(--ac);border-color:var(--ac);color:var(--bg);font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+input,select,textarea{width:100%;padding:8px;border:1px solid var(--ln);border-radius:6px;background:var(--sf);color:var(--tx);font-size:14px}
+label{display:block;font-size:13px;color:var(--mu);margin-top:10px}
+.wrap{max-width:1180px;margin:0 auto;padding:18px}
+.auth{max-width:380px;margin:9vh auto;background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:26px}
+.auth p{color:var(--mu);margin:6px 0 14px}.err{color:var(--rj);font-size:13px;min-height:18px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.top .r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--sf);border:1px solid var(--ln);border-left:4px solid var(--c);border-radius:6px;padding:10px 12px}
+.stat b{font:600 24px "Avenir Next",system-ui,sans-serif;display:block}.stat span{color:var(--mu);font-size:13px}
+.lay{display:grid;grid-template-columns:1fr 290px;gap:16px}
+.board{display:grid;grid-template-columns:repeat(5,minmax(190px,1fr));gap:10px;overflow-x:auto}
+.col{background:var(--ac2);border-radius:8px;padding:8px;min-height:140px}
+.col h3{font-size:13px;margin:2px 4px 8px;color:var(--c)}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:6px;padding:10px;margin-bottom:8px}
+.card b{display:block}.card small{color:var(--mu);display:block}
+.card .a{display:flex;gap:6px;margin-top:8px}.card .a select{padding:4px}.card .a button{padding:4px 8px;font-size:13px}
+.side{background:var(--sf);border:1px solid var(--ln);border-radius:8px;padding:14px;align-self:start}
+.rem{padding:8px 0;border-top:1px solid var(--ln);font-size:14px}.rem:first-of-type{border:0}
+.late{color:var(--wa);font-weight:600}.empty{color:var(--mu);font-size:14px}
+dialog{border:1px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--tx);width:min(440px,94vw)}
+dialog::backdrop{background:#0008}.g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mode{font-size:12px;color:var(--mu)}
+@media(max-width:860px){.lay{grid-template-columns:1fr}}
+</style></head><body>
+<div id="app"></div>
+<dialog id="dlg"><form id="f" method="dialog" style="padding:6px">
+<h2 id="dt">Add application</h2>
+<label>Company<input name="company" required></label><label>Role<input name="role" required></label>
+<div class="g"><label>Status<select name="status"></select></label><label>Applied on<input type="date" name="applied_on"></label></div>
+<label>Follow-up reminder date<input type="date" name="follow_up"></label>
+<label>Job link<input name="url" placeholder="https://"></label>
+<label>Notes<textarea name="notes" rows="3"></textarea></label>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button type="button" id="cx">Cancel</button><button class="p">Save application</button></div>
+</form></dialog>
+<script>
+/* Add your Supabase project values to switch from demo mode to the real database. */
+const CFG={url:"",key:""};
+const ST=["Wishlist","Applied","Interview","Offer","Rejected"],COL={Wishlist:"--wl",Applied:"--ap",Interview:"--iv",Offer:"--of",Rejected:"--rj"};
+const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sb=CFG.url&&window.supabase?supabase.createClient(CFG.url,CFG.key):null;
+const mem={};const LS=(k,v)=>{try{if(v===undefined){const r=localStorage.getItem(k);return r?JSON.parse(r):mem[k]??null}localStorage.setItem(k,JSON.stringify(v))}catch(e){if(v===undefined)return mem[k]??null;mem[k]=v}};
+let user=null,apps=[],authMode="in",editing=null;
+const today=()=>new Date().toISOString().slice(0,10);
+async function load(){if(sb){const{data}=await sb.from("applications").select("*").order("created_at",{ascending:false});apps=data||[]}else apps=LS("lt_apps_"+user.id)||[]}
+async function put(a){if(sb){a.user_id=user.id;const{error}=await sb.from("applications").upsert(a);if(error)return alert(error.message)}else{const i=apps.findIndex(x=>x.id===a.id);i<0?apps.unshift(a):apps[i]=a;LS("lt_apps_"+user.id,apps)}await load();draw()}
+async function del(id){if(sb)await sb.from("applications").delete().eq("id",id);else LS("lt_apps_"+user.id,apps.filter(a=>a.id!==id));await load();draw()}
+async function auth(e){e.preventDefault();const em=$("#em").value.trim().toLowerCase(),pw=$("#pw").value;let err="";
+if(sb){const r=authMode==="up"?await sb.auth.signUp({email:em,password:pw}):await sb.auth.signInWithPassword({email:em,password:pw});
+if(r.error)err=r.error.message;else if(!r.data.session)err="Check your inbox to confirm your email, then sign in.";else user=r.data.user}
+else{const us=LS("lt_users")||{};if(authMode==="up"){if(us[em])err="That email already has an account.";else if(pw.length<6)err="Use at least 6 characters.";else{us[em]={id:"u_"+em};LS("lt_users",us);us[em].pw=pw;LS("lt_users",us);user={id:us[em].id,email:em}}}
+else if(!us[em]||us[em].pw!==pw)err="Email or password is incorrect.";else user={id:us[em].id,email:em}}
+if(err)return $("#err").textContent=err;await load();draw()}
+function login(){$("#app").innerHTML=`<form class="auth" id="af"><h1>Ledgerline</h1><p>Track every application, interview and follow-up in one place.</p>
+<label>Email<input id="em" type="email" required autocomplete="email"></label><label>Password<input id="pw" type="password" required autocomplete="current-password"></label>
+<div class="err" id="err"></div><button class="p" style="width:100%">${authMode==="up"?"Create account":"Sign in"}</button>
+<p style="margin:14px 0 0;font-size:13px">${authMode==="up"?"Have an account?":"New here?"} <a href="#" id="sw">${authMode==="up"?"Sign in":"Create an account"}</a></p>
+<p class="mode">${sb?"Connected to Supabase.":"Demo mode: data stays in this browser. Add Supabase keys to go live."}</p></form>`;
+$("#af").onsubmit=auth;$("#sw").onclick=e=>{e.preventDefault();authMode=authMode==="up"?"in":"up";login()}}
+const cal=a=>{const d=a.follow_up.replace(/-/g,"");const n=new Date(a.follow_up+"T00:00");n.setDate(n.getDate()+1);const e=n.toISOString().slice(0,10).replace(/-/g,"");
+return"https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent("Follow up: "+a.company+" ("+a.role+")")+"&dates="+d+"/"+e}
+function draw(){const t=today(),due=apps.filter(a=>a.follow_up&&!["Offer","Rejected"].includes(a.status)).sort((a,b)=>a.follow_up.localeCompare(b.follow_up));
+const rate=apps.filter(a=>a.status!=="Wishlist").length;const iv=apps.filter(a=>["Interview","Offer"].includes(a.status)).length;
+$("#app").innerHTML=`<div class="wrap"><div class="top"><div><h1>Ledgerline</h1><span class="mode ui">${esc(user.email||"")} · ${sb?"Supabase":"Demo mode"}</span></div>
+<div class="r"><button class="p" id="add">Add application</button><button id="out">Sign out</button></div></div>
+<div class="stats">${ST.map(s=>`<div class="stat" style="--c:var(${COL[s]})"><b>${apps.filter(a=>a.status===s).length}</b><span>${s}</span></div>`).join("")}
+<div class="stat" style="--c:var(--ac)"><b>${rate?Math.round(iv/rate*100):0}%</b><span>Reached interview</span></div></div>
+<div class="lay"><div class="board">${ST.map(s=>`<div class="col" style="--c:var(${COL[s]})"><h3>${s}</h3>${apps.filter(a=>a.status===s).map(a=>`<div class="card"><b>${esc(a.company)}</b><small>${esc(a.role)}</small>
+${a.follow_up?`<small class="${a.follow_up<=t?"late":""}">Follow up ${a.follow_up}</small>`:""}<div class="a"><select data-mv="${a.id}" aria-label="Move ${esc(a.company)}">${ST.map(x=>`<option${x===s?" selected":""}>${x}</option>`).join("")}</select><button data-ed="${a.id}">Edit</button><button data-rm="${a.id}" aria-label="Delete">✕</button></div></div>`).join("")||`<div class="empty">Nothing here yet.</div>`}</div>`).join("")}</div>
+<aside class="side"><h2>Reminders</h2>${due.map(a=>`<div class="rem"><b>${esc(a.company)}</b> <span class="${a.follow_up<=t?"late":""}">${a.follow_up<t?"overdue since ":a.follow_up===t?"due today, ":"on "}${a.follow_up}</span><br><a href="${cal(a)}" target="_blank" rel="noopener">Add to Google Calendar</a></div>`).join("")||`<div class="empty">Set a follow-up date on an application and it will show up here.</div>`}
+<p class="mode">${sb?"Email reminders are sent daily by your Supabase Edge Function.":"Email reminders run on the live Supabase version."}</p></aside></div></div>`;
+$("#add").onclick=()=>openF();$("#out").onclick=async()=>{if(sb)await sb.auth.signOut();user=null;login()}}
+function openF(a){editing=a||null;const f=$("#f");f.reset();f.status.innerHTML=ST.map(s=>`<option>${s}</option>`).join("");$("#dt").textContent=a?"Edit application":"Add application";
+if(a)for(const k of["company","role","status","applied_on","follow_up","url","notes"])f[k].value=a[k]||"";else{f.status.value="Applied";f.applied_on.value=today()}$("#dlg").showModal()}
+$("#cx").onclick=()=>$("#dlg").close();
+$("#f").onsubmit=async e=>{const f=e.target,a={...(editing||{id:crypto.randomUUID(),created_at:new Date().toISOString()})};
+for(const k of["company","role","status","applied_on","follow_up","url","notes"])a[k]=f[k].value||null;if(a.follow_up!==editing?.follow_up)a.reminded_on=null;await put(a)};
+document.addEventListener("click",e=>{const t=e.target,g=k=>t.dataset[k];if(g("ed"))openF(apps.find(a=>a.id===g("ed")));if(g("rm")&&confirm("Delete this application?"))del(g("rm"))});
+document.addEventListener("change",e=>{const id=e.target.dataset.mv;if(id){const a=apps.find(x=>x.id===id);put({...a,status:e.target.value})}});
+(async()=>{if(sb){const{data}=await sb.auth.getSession();if(data.session){user=data.session.user;await load();return draw()}}login()})();
+</script></body></html>
